@@ -1,0 +1,7 @@
+port: 3000
+logLevel: info
+evalIntervalMinutes: 5
+targetDomains:
+  - example.com
+virusTotal:
+  apiKey: secret

@@ -1,0 +1,28 @@
+rule_files:
+    - /dev/stdin
+
+evaluation_interval: 1m
+
+tests:
+    - interval: 1m
+      input_series:
+          - series: 'virustotal_reports{domain="example.com"}'
+            values: '0 0 1+0x10 0 0' # 0 0 1 1 1 1 1 1 1 1 1 1 1 0 0
+
+      alert_rule_test:
+          # Test VirustotalReports alert
+          - eval_time: 1m # Values: 0 0 1 1 
+            alertname: VirustotalReports
+            exp_alerts:
+          - eval_time: 4m # Values: 0 0 1 1 1 1 1 1 1 1
+            alertname: VirustotalReports
+            exp_alerts:
+                - exp_labels:
+                    severity: warning
+                    origin: cluster
+                    domain: example.com
+                  exp_annotations:
+                      message: 'Domain example.com might have been flagged as problematic, please visit https://www.virustotal.com/gui/domain/example.com to doublecheck.'                       
+          - eval_time: 13m # Values: 0 0 1 1 1 1 1 1 1 1 1 1 0        
+            alertname: VirustotalReports
+            exp_alerts:   

@@ -1,0 +1,13 @@
+environments:
+  ci:
+
+repositories:
+- name: w3f
+  url: https://w3f.github.io/helm-charts/
+
+releases:
+
+- name: virustotal
+  chart: ../charts/virustotal-prometheus
+  values:
+  - ./config/virustotal-values.yaml.gotmpl
