@@ -5,7 +5,8 @@ import { Prometheus } from '../prometheus';
 import { register } from 'prom-client';
 import { InputConfig } from '../types';
 import { evalIntervalMinutes } from '../constants';
-const vt = require('node-virustotal');
+import vt from 'node-virustotal'
+
 const logger = LoggerSingleton.getInstance()
 
 
