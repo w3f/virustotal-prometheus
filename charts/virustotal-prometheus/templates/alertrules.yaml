@@ -1,0 +1,27 @@
+# max by(job,namespace,network,address,name) is the primary key which all the metrics are aggregated by to avoid alerts flapping: i.e. when a K8s pod restarts 
+# The same result could be achieved by applying max without(instance,pod)
+# --
+# last_over_time is used to avoid alerts flapping when the alert is firing and the alert disappear, to override and extend the default endsAt behaviour: i.e. when the watcher takes a while to restart
+# --
+# All the queries are also filtered by the "environment" label: i.e. to not mix metrics coming from staging and production environments
+
+{{ if and .Values.prometheusRules.enabled ( ne .Values.config.environment "ci" ) }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+{{ toYaml .Values.prometheusRules.labels | indent 4 }}
+  name: {{ .Release.Name }}
+spec:
+  groups:
+  - name: {{ .Release.Name }}.rules
+    rules:
+    - alert: VirustotalReports
+      annotations:
+        message: 'Domain {{`{{ $labels.domain }}`}} might have been flagged as problematic, please visit https://www.virustotal.com/gui/domain/{{`{{ $labels.domain }}`}} to doublecheck.'
+      expr: max without(instance,pod) (last_over_time(virustotal_reports[10m])) > 0
+      for: 2m
+      labels:
+        severity: warning
+        origin: {{ .Values.prometheusRules.origin }}     
+{{ end }}

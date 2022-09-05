@@ -1,0 +1,28 @@
+image:
+  repo: web3f/virustotal-prometheus
+  # tag: latest
+
+config:
+  port: 3000
+  logLevel: info
+  evalIntervalMinutes: 5
+  targetDomains:
+    - example.com
+  virusTotal:
+    apiKey: secret
+
+serviceMonitor:
+  enabled: true
+  labels:
+    group: w3f
+    release: virustotal-prometheus
+
+prometheusRules:
+  enabled: false #if you have multiple instances, enabled it just once to avoid duplicated alerts
+  labels:
+    app: w3f
+  origin: cluster  
+
+resources:
+  requests: {}
+  limits: {}

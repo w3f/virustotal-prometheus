@@ -1,0 +1,143 @@
+version: 2
+
+jobs:
+
+  yarnLint:
+    docker:
+      - image: web3f/node-dind:v1.0.0
+    steps:
+      - checkout
+      - run: yarn
+      - run: yarn lint    
+
+  helmLint:
+    docker:
+      - image: web3f/ci-commons:v2.4.18
+    steps:
+      - checkout
+      - run:
+          command: |
+            helm lint ./charts/polkadot-watcher
+
+  buildImage:
+    docker:
+      - image: web3f/ci-commons:v2.4.18
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+          version: 20.10.7
+      - run:
+          command: |
+            /scripts/build-image.sh web3f/virustotal-prometheus .
+
+  integrationTests:
+    docker:
+      - image: web3f/ci-commons:v2.4.18
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          description: run integration tests
+          command: |
+            /scripts/integration-tests.sh kindest/node:v1.19.11
+
+  testPrometheusRules:
+    docker:
+      - image: web3f/ci-commons:v2.4.18
+    steps:
+      - checkout
+      - run:
+          name: Install missing dependencies
+          command: |
+            YQ_VER=4.16.1
+            wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v${YQ_VER}/yq_linux_amd64
+
+            chmod +x /usr/local/bin/yq
+
+            PROM_VER=2.31.1
+            wget -O /tmp/prometheus.tgz https://github.com/prometheus/prometheus/releases/download/v${PROM_VER}/prometheus-${PROM_VER}.linux-amd64.tar.gz
+            tar -xvf /tmp/prometheus.tgz prometheus-${PROM_VER}.linux-amd64/promtool -C /tmp
+            mv /tmp/prometheus-$PROM_VER.linux-amd64/promtool /usr/local/bin/
+      - run:
+          command: |
+            scripts/test_prometheus_rules.sh
+
+
+  publishImage:
+    docker:
+      - image: web3f/ci-commons:v2.4.18
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          command: |
+            /scripts/publish-image.sh web3f/virustotal-prometheus
+
+  publishChart:
+    docker:
+      - image: web3f/ci-commons:v2.4.18
+    steps:
+      - checkout
+      - run:
+          command: |
+            /scripts/publish-chart.sh
+
+workflows:
+  version: 2
+  test_and_deploy:
+    jobs:    
+      - helmLint:
+          filters:
+            tags:
+              only: /.*/
+      - yarnLint:
+          filters:
+            tags:
+              only: /.*/    
+      - unitTest:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - helmLint
+            - yarnLint             
+      - testPrometheusRules:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - helmLint
+            - yarnLint         
+      - buildImage:
+          context: dockerhub-bot
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - unitTest
+            - testPrometheusRules
+      - integrationTests:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - buildImage
+      - publishImage:
+          context: dockerhub-bot
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+          requires:
+            - integrationTests
+      - publishChart:
+          context: github-bot
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+          requires:
+            - integrationTests
