@@ -16,7 +16,7 @@ function lookup(vtApi: any, promClient: Prometheus, domain: string){
         if (err) {
         logger.error(`Error on processing ${domain}`);
         logger.error(err);
-        return;
+        process.exit(-1)
         }
 
         const parsed = JSON.parse(res)
