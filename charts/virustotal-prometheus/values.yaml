@@ -1,3 +1,5 @@
+environment: production
+
 image:
   repo: web3f/virustotal-prometheus
   # tag: latest
