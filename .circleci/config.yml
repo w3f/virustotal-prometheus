@@ -94,14 +94,7 @@ workflows:
       - yarnLint:
           filters:
             tags:
-              only: /.*/    
-      - unitTest:
-          filters:
-            tags:
-              only: /.*/
-          requires:
-            - helmLint
-            - yarnLint             
+              only: /.*/              
       - testPrometheusRules:
           filters:
             tags:
