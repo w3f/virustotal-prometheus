@@ -7,7 +7,7 @@ image:
 config:
   port: 3000
   logLevel: info
-  evalIntervalMinutes: 5
+  evalIntervalMinutes: 120
   targetDomains:
     - example.com
   virusTotal:
