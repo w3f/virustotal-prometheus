@@ -2,6 +2,10 @@ port: 3000
 logLevel: info
 evalIntervalMinutes: 5
 targetDomains:
+  cloudflare:
+    enabled: false
+    apiKey: secret
+  manualList:  
   - example.com
 virusTotal:
   apiKey: secret

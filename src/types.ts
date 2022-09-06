@@ -2,7 +2,13 @@
 export interface InputConfig {
     logLevel: string;
     port: number;
-    targetDomains: Array<string>;
+    targetDomains: {
+        manualList?: Array<string>;
+        cloudflare: {
+            enabled: boolean;
+            apiKey: string;
+        };
+    } ;
     evalIntervalMinutes?: number;
     virusTotal: {
         apiKey: string;

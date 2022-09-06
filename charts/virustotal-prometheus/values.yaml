@@ -9,7 +9,11 @@ config:
   logLevel: info
   evalIntervalMinutes: 120
   targetDomains:
-    - example.com
+    cloudflare:
+      enabled: false
+      apiKey: secret
+    manualList:  
+      - example.com
   virusTotal:
     apiKey: secret
 
