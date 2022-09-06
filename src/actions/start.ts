@@ -6,6 +6,7 @@ import { register } from 'prom-client';
 import { InputConfig } from '../types';
 import { evalIntervalMinutes } from '../constants';
 import vt from 'node-virustotal'
+import Cloudflare = require('cloudflare')
 
 const logger = LoggerSingleton.getInstance()
 
@@ -35,7 +36,7 @@ export async function startAction(cmd): Promise<void> {
 
     const domainsSet = new Set<string>()
     if(cfg.targetDomains.cloudflare.enabled){
-        const cf = require('cloudflare')({
+        const cf = new Cloudflare({
             token: cfg.targetDomains.cloudflare.apiKey
         });
 
