@@ -1,6 +1,6 @@
 {
   "name": "virustotal-prometheus",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Monitor VirusTotal reports and expose Prometheus metrics",
   "repository": "git@github.com:w3f/report-scanner.git",
   "author": "W3F Infrastructure Team <devops@web3.foundation>",
@@ -22,6 +22,7 @@
   "dependencies": {
     "@w3f/config": "^0.1.1",
     "@w3f/logger": "^0.4.3",
+    "cloudflare": "^2.9.1",
     "commander": "^4.0.0",
     "express": "^4.18.1",
     "node-virustotal": "^3.35.0",

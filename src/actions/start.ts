@@ -32,6 +32,30 @@ export async function startAction(cmd): Promise<void> {
 
     const cfg = new Config<InputConfig>().parse(cmd.config);
     LoggerSingleton.setInstance(cfg.logLevel)
+
+    const domainsSet = new Set<string>()
+    if(cfg.targetDomains.cloudflare.enabled){
+        const cf = require('cloudflare')({
+            token: cfg.targetDomains.cloudflare.apiKey
+        });
+
+        try {
+            const zones = await cf.zones.browse()
+            zones.result.forEach(element => {
+                domainsSet.add(element.name)
+            });
+        } catch (error) {
+            logger.error(`Error on processing the clouflare api`);
+            logger.error(error);
+            process.exit(-1)
+        }
+    }
+
+    const manualList = cfg.targetDomains.manualList ? cfg.targetDomains.manualList : []
+    manualList.forEach(domain=>domainsSet.add(domain))
+    const targetDomains = Array.from( domainsSet.values() )
+
+    logger.debug(targetDomains.toString())
     
     const server = express();
     server.get('/healthcheck',
@@ -46,13 +70,11 @@ export async function startAction(cmd): Promise<void> {
     
     const api = vt.makeAPI();
     api.setKey(cfg.virusTotal.apiKey)
-
     const promClient = new Prometheus();
-
     const evalInterval = cfg.evalIntervalMinutes? cfg.evalIntervalMinutes*1000*60 : evalIntervalMinutes
-    cfg.targetDomains.forEach(domain=>lookup(api,promClient,domain)) 
+    targetDomains.forEach(domain=>lookup(api,promClient,domain)) 
     setInterval(
-        () => cfg.targetDomains.forEach(domain => {
+        () => targetDomains.forEach(domain => {
             lookup(api,promClient,domain)
         }),
         evalInterval
