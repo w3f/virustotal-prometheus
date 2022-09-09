@@ -36,7 +36,7 @@ async function ibmLookup(apiToken: string, apiPassword: string ,promClient: Prom
     const options = {
         headers: {
             'accept': 'application/json',
-            'Authorization': 'Basic ZGQ0YTM0OGEtZmYzNy00YWZjLWEyMWItMDI3MzE0OWYxZDY3OjRmOTQ1YmRiLTk2MTYtNDY3My05YWY4LWUyNDI1OTllODc1NA=='
+            'Authorization': 'Basic xxx'
         },
     };
 
