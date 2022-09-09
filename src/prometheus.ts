@@ -5,6 +5,7 @@ import { PromClient } from './types';
 export class Prometheus implements PromClient {
 
     private virustotalReports: promClient.Gauge<"domain">;
+    private IbmScore: promClient.Gauge<"domain">;
 
     private readonly logger: Logger = LoggerSingleton.getInstance()
 
@@ -21,14 +22,22 @@ export class Prometheus implements PromClient {
         promClient.collectDefaultMetrics();
     }
 
-    setVTReports(domain: string, reports: number): void{
+    setVTReport(domain: string, reports: number): void{
       this.virustotalReports.set({domain}, reports);        
     }
+    setIbmScore(domain: string, score: number): void{
+        this.IbmScore.set({domain}, score);        
+      }
 
     _initMetrics(): void {
         this.virustotalReports = new promClient.Gauge({
             name: 'virustotal_reports',
             help: 'Virustotal bad status report for a specific domain',
+            labelNames: ['domain']
+        });
+        this.virustotalReports = new promClient.Gauge({
+            name: 'ibm_xforce_score',
+            help: 'Ibm xforce score for a specific domain, 1 is good',
             labelNames: ['domain']
         });
     }

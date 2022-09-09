@@ -13,8 +13,14 @@ export interface InputConfig {
     virusTotal: {
         apiKey: string;
     };
+    ibmXforce: {
+        enabled: boolean;
+        apiToken: string;
+        apiPassword: string;
+    };
 }
 
 export interface PromClient {
-    setVTReports(domain: string, reports: number): void;
+    setVTReport(domain: string, reports: number): void;
+    setIbmScore(domain: string, score: number): void;
 }
