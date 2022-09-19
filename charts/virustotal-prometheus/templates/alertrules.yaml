@@ -23,5 +23,13 @@ spec:
       for: 2m
       labels:
         severity: warning
-        origin: {{ .Values.prometheusRules.origin }}     
+        origin: {{ .Values.prometheusRules.origin }} 
+    - alert: IbmXforceBadScore
+      annotations:
+        message: 'Domain {{`{{ $labels.domain }}`}} might have been flagged as problematic, please visit https://www.exchange.xforce.ibmcloud.com/url/{{`{{ $labels.domain }}`}} to doublecheck.'
+      expr: max without(instance,pod) (last_over_time(ibm_xforce_score[10m])) > 1
+      for: 2m
+      labels:
+        severity: warning
+        origin: {{ .Values.prometheusRules.origin }}         
 {{ end }}

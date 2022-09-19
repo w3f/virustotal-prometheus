@@ -16,6 +16,10 @@ config:
       - example.com
   virusTotal:
     apiKey: secret
+  ibmXforce:
+    enabled: false
+    apiKey: xxx
+    apiPassword: xxx    
 
 serviceMonitor:
   enabled: true

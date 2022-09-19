@@ -1,6 +1,6 @@
 {
   "name": "virustotal-prometheus",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Monitor VirusTotal reports and expose Prometheus metrics",
   "repository": "git@github.com:w3f/report-scanner.git",
   "author": "W3F Infrastructure Team <devops@web3.foundation>",

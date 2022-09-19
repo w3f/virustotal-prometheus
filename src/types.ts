@@ -15,7 +15,7 @@ export interface InputConfig {
     };
     ibmXforce: {
         enabled: boolean;
-        apiToken: string;
+        apiKey: string;
         apiPassword: string;
     };
 }

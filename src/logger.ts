@@ -5,13 +5,14 @@ export class LoggerSingleton {
     private constructor() {
         //do nothing
     }
-    public static setInstance(level: string): void {
-        LoggerSingleton.instance = createLogger(level)
-    }
     public static getInstance(level?: string): Logger {
         if (!LoggerSingleton.instance) {
             LoggerSingleton.instance = createLogger(level)
         }        
+        return LoggerSingleton.instance
+    }
+    public static getNewInstance(level?: string): Logger {
+        LoggerSingleton.instance = createLogger(level)      
         return LoggerSingleton.instance
     }
 }
