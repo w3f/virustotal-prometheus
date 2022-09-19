@@ -6,16 +6,24 @@ import { register } from 'prom-client';
 import { InputConfig } from '../types';
 import { evalIntervalMinutes } from '../constants';
 import vt from 'node-virustotal'
-import Cloudflare = require('cloudflare')
+import cloudflare from 'cloudflare'
+import got from 'got'
 
-const logger = LoggerSingleton.getInstance()
+interface LookupConfig {
+    vtApi: any;
+    ibmApiKey?: string;
+    ibmPassword?: string;
+    ibmEnabled: boolean;
+    promClient: Prometheus;
+}
 
+let logger = LoggerSingleton.getInstance()
 
-function lookup(vtApi: any, promClient: Prometheus, domain: string){
-    logger.debug(`triggering a lookup for the domain ${domain}`)
+function vtLookup(vtApi: any, promClient: Prometheus, domain: string): void {
+    logger.debug(`triggering a Virustotal lookup for the domain ${domain}`)
     vtApi.domainLookup(domain,function(err, res){
         if (err) {
-        logger.error(`Error on processing ${domain}`);
+        logger.error(`Error on VT processing ${domain}`);
         logger.error(err);
         process.exit(-1)
         }
@@ -23,42 +31,48 @@ function lookup(vtApi: any, promClient: Prometheus, domain: string){
         const parsed = JSON.parse(res)
         const reports =  parsed.data.attributes.last_analysis_stats.malicious + parsed.data.attributes.last_analysis_stats.suspicious
         logger.info(`${domain} reports: ${reports}`);
-        promClient.setVTReports(domain,reports)
-        return;
+        promClient.setVTReport(domain,reports)
+        logger.debug(`VT lookup for the domain ${domain} DONE`)
     })
-    logger.debug(`lookup for the domain ${domain} DONE`)
 }
 
-export async function startAction(cmd): Promise<void> {
+async function ibmLookup(apiKey: string, apiPassword: string ,promClient: Prometheus, domain: string): Promise<void> {
+    logger.debug(`triggering an IBM lookup for the domain ${domain}`)
+    const url = `https://api.xforce.ibmcloud.com/api/url/${domain}`;
 
-    const cfg = new Config<InputConfig>().parse(cmd.config);
-    LoggerSingleton.setInstance(cfg.logLevel)
+    const options = {
+        headers: {
+            'accept': 'application/json',
+            'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString("base64")}`
+        },
+    };
 
-    const domainsSet = new Set<string>()
-    if(cfg.targetDomains.cloudflare.enabled){
-        const cf = new Cloudflare({
-            token: cfg.targetDomains.cloudflare.apiKey
-        });
-
-        try {
-            const zones = await cf.zones.browse()
-            zones.result.forEach(element => {
-                domainsSet.add(element.name)
-            });
-        } catch (error) {
-            logger.error(`Error on processing the clouflare api`);
+    try {
+        const response: any = await got(url,options).json();
+        logger.debug(JSON.stringify(response))
+        const score: number = response.result.score? response.result.score : 1 //unkown is treated as OK
+        logger.info(`${domain} ibm score, 1 is OK: ${score}`);
+        promClient.setIbmScore(domain,score)
+        logger.debug(`IBM lookup for the domain ${domain} DONE`)
+    } catch (error) {
+        const errorMessage: string = error.toString()
+        if(errorMessage.includes("404")){
+            logger.warn(`IBM api is not capable of processing ${domain}`)
+            logger.debug(errorMessage);
+        } else{
+            logger.error(`Error on IBM processing ${domain}`);
             logger.error(error);
             process.exit(-1)
         }
     }
+}
 
-    const manualList = cfg.targetDomains.manualList ? cfg.targetDomains.manualList : []
-    manualList.forEach(domain=>domainsSet.add(domain))
-    const targetDomains = Array.from( domainsSet.values() )
+async function lookup(config: LookupConfig, domain: string): Promise<void> {
+    vtLookup(config.vtApi,config.promClient,domain)
+    if(config.ibmEnabled) await ibmLookup(config.ibmApiKey,config.ibmPassword,config.promClient,domain)
+}
 
-    logger.debug(targetDomains.toString())
-    
-    const server = express();
+function configureServerEndpoints(server: express.Express): void {
     server.get('/healthcheck',
         async (req: express.Request, res: express.Response): Promise<void> => {
             res.status(200).send('OK!')
@@ -67,17 +81,59 @@ export async function startAction(cmd): Promise<void> {
             res.set('Content-Type', register.contentType)
             res.end(await register.metrics())
         })    
-    server.listen(cfg.port);
+}
+
+async function cfAddDomains(apiKey: string, domains: Set<string>): Promise<void> {
+    const cf = cloudflare({
+        token: apiKey
+    });
+
+    try {
+        const zones = await cf.zones.browse()
+        zones.result.forEach(element => {
+            domains.add(element.name)
+        });
+    } catch (error) {
+        logger.error(`Error on processing the clouflare api`);
+        logger.error(error);
+        process.exit(-1)
+    }
+}
+
+export async function startAction(cmd): Promise<void> {
+
+    const cfg = new Config<InputConfig>().parse(cmd.config);
+    logger = LoggerSingleton.getNewInstance(cfg.logLevel)
+
+    const domainsSet = new Set<string>()
+    if(cfg.targetDomains.cloudflare.enabled){
+        await cfAddDomains(cfg.targetDomains.cloudflare.apiKey,domainsSet)
+    }
+    const manualList = cfg.targetDomains.manualList ? cfg.targetDomains.manualList : []
+    manualList.forEach(domain=>domainsSet.add(domain))
+    const targetDomains = Array.from( domainsSet.values() )
+    logger.info(`Target List: ${targetDomains.toString()}`)
     
-    const api = vt.makeAPI();
-    api.setKey(cfg.virusTotal.apiKey)
+    const server = express();
+    configureServerEndpoints(server)
+    server.listen(cfg.port);
+
     const promClient = new Prometheus();
     const evalInterval = cfg.evalIntervalMinutes? cfg.evalIntervalMinutes*1000*60 : evalIntervalMinutes
-    targetDomains.forEach(domain=>lookup(api,promClient,domain)) 
+    
+    const vtApi = vt.makeAPI();
+    vtApi.setKey(cfg.virusTotal.apiKey)
+
+    const lookupConfig = {
+        vtApi: vtApi,
+        ibmApiKey: cfg.ibmXforce.apiKey,
+        ibmPassword: cfg.ibmXforce.apiPassword,
+        ibmEnabled: cfg.ibmXforce.enabled,
+        promClient: promClient
+    }
+    targetDomains.forEach(domain => lookup(lookupConfig,domain)) 
     setInterval(
-        () => targetDomains.forEach(domain => {
-            lookup(api,promClient,domain)
-        }),
+        () => targetDomains.forEach(domain => lookup(lookupConfig,domain)),
         evalInterval
     )
 }
