@@ -9,7 +9,7 @@ import vt from 'node-virustotal'
 import cloudflare from 'cloudflare'
 import got from 'got'
 
-interface lookupConfig {
+interface LookupConfig {
     vtApi: any;
     ibmApiKey?: string;
     ibmPassword?: string;
@@ -17,14 +17,9 @@ interface lookupConfig {
     promClient: Prometheus;
 }
 
-var logger = LoggerSingleton.getInstance()
+let logger = LoggerSingleton.getInstance()
 
-async function lookup(config: lookupConfig, domain: string): Promise<void> {
-    vtLookup(config.vtApi,config.promClient,domain)
-    if(config.ibmEnabled) await ibmLookup(config.ibmApiKey,config.ibmPassword,config.promClient,domain)
-}
-
-function vtLookup(vtApi: any, promClient: Prometheus, domain: string){
+function vtLookup(vtApi: any, promClient: Prometheus, domain: string): void {
     logger.debug(`triggering a Virustotal lookup for the domain ${domain}`)
     vtApi.domainLookup(domain,function(err, res){
         if (err) {
@@ -41,7 +36,7 @@ function vtLookup(vtApi: any, promClient: Prometheus, domain: string){
     })
 }
 
-async function ibmLookup(apiKey: string, apiPassword: string ,promClient: Prometheus, domain: string){
+async function ibmLookup(apiKey: string, apiPassword: string ,promClient: Prometheus, domain: string): Promise<void> {
     logger.debug(`triggering an IBM lookup for the domain ${domain}`)
     const url = `https://api.xforce.ibmcloud.com/api/url/${domain}`;
 
@@ -54,7 +49,7 @@ async function ibmLookup(apiKey: string, apiPassword: string ,promClient: Promet
 
     try {
         const response: any = await got(url,options).json();
-        logger.info(JSON.stringify(response))
+        logger.debug(JSON.stringify(response))
         const score: number = response.result.score? response.result.score : 1 //unkown is treated as OK
         logger.info(`${domain} ibm score, 1 is OK: ${score}`);
         promClient.setIbmScore(domain,score)
@@ -63,13 +58,18 @@ async function ibmLookup(apiKey: string, apiPassword: string ,promClient: Promet
         const errorMessage: string = error.toString()
         if(errorMessage.includes("404")){
             logger.warn(`IBM api is not capable of processing ${domain}`)
-            logger.warn(errorMessage);
+            logger.debug(errorMessage);
         } else{
             logger.error(`Error on IBM processing ${domain}`);
             logger.error(error);
             process.exit(-1)
         }
     }
+}
+
+async function lookup(config: LookupConfig, domain: string): Promise<void> {
+    vtLookup(config.vtApi,config.promClient,domain)
+    if(config.ibmEnabled) await ibmLookup(config.ibmApiKey,config.ibmPassword,config.promClient,domain)
 }
 
 function configureServerEndpoints(server: express.Express): void {
