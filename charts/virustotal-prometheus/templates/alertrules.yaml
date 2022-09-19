@@ -24,6 +24,7 @@ spec:
       labels:
         severity: warning
         origin: {{ .Values.prometheusRules.origin }} 
+    {{ if eq .Values.config.ibmXforce.enabled true }}    
     - alert: IbmXforceBadScore
       annotations:
         message: 'Domain {{`{{ $labels.domain }}`}} might have been flagged as problematic, please visit https://www.exchange.xforce.ibmcloud.com/url/{{`{{ $labels.domain }}`}} to doublecheck.'
@@ -31,5 +32,6 @@ spec:
       for: 2m
       labels:
         severity: warning
-        origin: {{ .Values.prometheusRules.origin }}         
+        origin: {{ .Values.prometheusRules.origin }}
+    {{ end }}       
 {{ end }}
