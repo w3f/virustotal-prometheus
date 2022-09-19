@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@types/express": "4.17.14",
-    "@types/node": "14.18.28",
+    "@types/node": "14.18.29",
     "@typescript-eslint/eslint-plugin": "2.34.0",
     "@typescript-eslint/parser": "2.34.0",
     "eslint": "7.32.0",
