@@ -24,4 +24,4 @@ the domain list can be dynamically enriched via Clodflare. Please set up this co
 ```
 yarn
 yarn start -c path_to_config_file
-```
+```test
