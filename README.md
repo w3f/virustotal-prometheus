@@ -1,6 +1,6 @@
 [![CircleCI](https://circleci.com/gh/w3f/virustotal-prometheus.svg?style=svg)](https://circleci.com/gh/w3f/virustotal-prometheus)
 
-# virustotal-prometheus
+# virustotal-prometheus 
 
 App to monitor (mainly) VirusTotal reports and to expose Prometheus metrics.  
 
